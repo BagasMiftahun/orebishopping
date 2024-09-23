@@ -1,58 +1,61 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ReactPaginate from "react-paginate";
 import Product from "../../home/Products/Product";
-import { paginationItems } from "../../../constants";
-
-const items = paginationItems;
-function Items({ currentItems }) {
-  return (
-    <>
-      {currentItems &&
-        currentItems.map((item) => (
-          <div key={item._id} className="w-full">
-            <Product
-              _id={item._id}
-              img={item.img}
-              productName={item.productName}
-              price={item.price}
-              color={item.color}
-              badge={item.badge}
-              des={item.des}
-            />
-          </div>
-        ))}
-    </>
-  );
-}
 
 const Pagination = ({ itemsPerPage }) => {
-  // Here we use item offsets; we could also use page offsets
-  // following the API or data you're working with.
+  const [products, setProducts] = useState([]);
   const [itemOffset, setItemOffset] = useState(0);
-  const [itemStart, setItemStart] = useState(1);
 
-  // Simulate fetching items from another resources.
-  // (This could be items from props; or items loaded in a local state
-  // from an API endpoint with useEffect and useState)
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const token = localStorage.getItem("token"); // Get token from local storage
+
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/products`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`, // Use token from localStorage
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const data = await response.json();
+        if (data.status === "success") {
+          setProducts(data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
   const endOffset = itemOffset + itemsPerPage;
-  //   console.log(`Loading items from ${itemOffset} to ${endOffset}`);
-  const currentItems = items.slice(itemOffset, endOffset);
-  const pageCount = Math.ceil(items.length / itemsPerPage);
+  const currentItems = products.slice(itemOffset, endOffset);
+  const pageCount = Math.ceil(products.length / itemsPerPage);
 
-  // Invoke when user click to request another page.
   const handlePageClick = (event) => {
-    const newOffset = (event.selected * itemsPerPage) % items.length;
+    const newOffset = (event.selected * itemsPerPage) % products.length;
     setItemOffset(newOffset);
-    // console.log(
-    //   `User requested page number ${event.selected}, which is offset ${newOffset},`
-    // );
-    setItemStart(newOffset);
   };
 
   return (
     <div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10 mdl:gap-4 lg:gap-10">
-        <Items currentItems={currentItems} />
+        {currentItems && currentItems.map((item) => (
+          <div key={item.ID} className="w-full">
+            <Product
+              _id={item.ID}
+              img={item.image_url} // Use the correct field for image URL
+              productName={item.name} // Use the correct field for product name
+              price={item.price}
+              color={item.color}
+              badge={item.badge} // Assuming you want to show a badge, adjust as needed
+              des={item.description} // Adjust as needed if description is needed
+            />
+          </div>
+        ))}
       </div>
       <div className="flex flex-col mdl:flex-row justify-center mdl:justify-between items-center">
         <ReactPaginate
@@ -67,10 +70,8 @@ const Pagination = ({ itemsPerPage }) => {
           containerClassName="flex text-base font-semibold font-titleFont py-10"
           activeClassName="bg-black text-white"
         />
-
         <p className="text-base font-normal text-lightText">
-          Products from {itemStart === 0 ? 1 : itemStart} to {endOffset} of{" "}
-          {items.length}
+          Products from {itemOffset + 1} to {endOffset} of {products.length}
         </p>
       </div>
     </div>
